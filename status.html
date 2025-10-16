@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Autoware 실시간 데이터 그래프</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            width: 80%; 
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Autoware 차량 속도 실시간 모니터링</h1>
+    
+    <div class="chart-container">
+        <canvas id="autowareSpeedChart"></canvas>
+        <p id="lastUpdateTime">마지막 업데이트: 로딩 중...</p>
+    </div>
+
+    <script>
+        let speedChart; // 그래프 객체를 저장할 전역 변수
+        
+        // 5초마다 API를 호출하여 데이터를 갱신하고 그래프를 다시 그리는 함수
+        function fetchAndDrawGraph() {
+            // 1. Flask 서버의 API 경로로 요청
+            fetch('/api/autoware')
+                .then(response => response.json())
+                .then(data => {
+                    const labels = data.labels;
+                    const speedValues = data.speed;
+
+                    const ctx = document.getElementById('autowareSpeedChart').getContext('2d');
+                    
+                    // 기존 그래프가 있으면 데이터를 갱신합니다.
+                    if (speedChart) {
+                        speedChart.data.labels = labels;
+                        speedChart.data.datasets[0].data = speedValues;
+                        speedChart.update(); // 그래프 업데이트 명령
+                    } else {
+                        // 최초 로드 시 그래프를 생성합니다.
+                        speedChart = new Chart(ctx, {
+                            type: 'line', // 꺾은선 그래프가 실시간 변화에 적합
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: '차량 속도 (m/s)',
+                                    data: speedValues,
+                                    backgroundColor: 'rgba(255, 99, 132, 0.4)',
+                                    borderColor: 'rgba(255, 99, 132, 1)',
+                                    borderWidth: 2,
+                                    tension: 0.1, // 부드러운 선
+                                    fill: true
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                animation: {
+                                    duration: 0 // 업데이트 시 애니메이션을 끔
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: {
+                                            display: true,
+                                            text: '속도 (m/s)'
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    
+                    // 마지막 업데이트 시간 표시
+                    document.getElementById('lastUpdateTime').textContent = '마지막 업데이트: ' + new Date().toLocaleTimeString('ko-KR');
+
+                })
+                .catch(error => {
+                    console.error('데이터 로드 오류:', error);
+                    document.getElementById('lastUpdateTime').textContent = '데이터 로드 실패';
+                });
+        }
+
+        // 2. 페이지 로드 시 즉시 실행
+        fetchAndDrawGraph();
+
+        // 3. 2초(2000ms)마다 자동으로 데이터를 갱신
+        setInterval(fetchAndDrawGraph, 2000); 
+    </script>
+</body>
+</html>
