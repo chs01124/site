@@ -4,15 +4,61 @@
     <title>Autoware 실시간 데이터 그래프</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; }
+        /* 1. [수정] 가상 마우스 효과 (커서 변경) 추가 */
+        body { 
+            font-family: Arial, sans-serif; 
+            cursor: crosshair; /* 페이지 기본 커서를 십자 모양으로 변경 */
+        }
         .chart-container {
             width: 80%; 
             margin: 20px auto;
         }
+        /* 차트와 버튼 위에서는 손가락 모양으로 */
+        #autowareSpeedChart, .key {
+             cursor: pointer;
+        }
+        
         #lastUpdateTime {
             text-align: center;
             font-size: 0.9em;
             color: #666;
+        }
+
+        /* 2. [추가] 가상 키보드 스타일 */
+        #keyboard-section {
+            width: 80%;
+            margin: 30px auto; /* 위쪽 차트와 간격 띄우기 */
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #ddd; /* 구분선 */
+        }
+        #virtual-input {
+            width: 300px;
+            font-size: 1.2em;
+            padding: 5px;
+            margin-bottom: 15px;
+        }
+        #keyboard-container {
+            display: flex;
+            justify-content: center; /* 버튼들 가운데 정렬 */
+            gap: 10px; /* 버튼 사이 간격 */
+        }
+        .key {
+            padding: 15px 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border: 1px solid #ccc;
+            background-color: #f4f4f4;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            user-select: none; /* 텍스트 선택 방지 */
+        }
+        .key:hover {
+            background-color: #e0e0e0;
+        }
+        .key.backspace {
+            background-color: #f8d7da;
+            color: #721c24;
         }
     </style>
 </head>
@@ -24,7 +70,25 @@
         <p id="lastUpdateTime">마지막 업데이트: 로딩 중...</p>
     </div>
 
+    <div id="keyboard-section">
+        <h2>가상 키보드 입력</h2>
+        <input type="text" id="virtual-input" placeholder="아래 버튼으로 입력...">
+        
+        <div id="keyboard-container">
+            <button class="key">Q</button>
+            <button class="key">W</button>
+            <button class="key">E</button>
+            <button class="key">R</button>
+            <button class="key">T</button>
+            <button class="key backspace">← 지우기</button>
+        </div>
+    </div>
+
+
     <script>
+        // =============================================
+        // === 1. 기존 차트 스크립트 (수정 없음) ===
+        // =============================================
         let speedChart; // 그래프 객체를 저장할 전역 변수
         
         // 1. Cloudflare 프록시(🌩️) 주소
@@ -106,6 +170,33 @@
 
         // 5. 2초(2000ms)마다 자동으로 데이터를 갱신
         setInterval(fetchAndDrawGraph, 2000); 
+
+
+        // =============================================
+        // === 4. [추가] 가상 키보드 스크립트 ===
+        // =============================================
+
+        // 키보드 입력을 받을 <input> 요소를 찾습니다.
+        const virtualInput = document.getElementById('virtual-input');
+        
+        // 'key' 클래스를 가진 모든 버튼을 찾습니다.
+        const keys = document.querySelectorAll('.key');
+
+        // 각 키 버튼에 클릭 이벤트를 추가합니다.
+        keys.forEach(function(key) {
+            key.addEventListener('click', function() {
+                // 클릭된 버튼의 텍스트 (Q, W, E...)
+                const keyValue = key.textContent; 
+
+                if (key.classList.contains('backspace')) {
+                    // 'backspace' 클래스가 있으면 지우기 기능
+                    virtualInput.value = virtualInput.value.slice(0, -1);
+                } else {
+                    // 일반 키면 글자 추가
+                    virtualInput.value += keyValue;
+                }
+            });
+        });
     </script>
 </body>
 </html>
