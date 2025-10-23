@@ -27,7 +27,7 @@
     <script>
         let speedChart; // 그래프 객체를 저장할 전역 변수
         
-        // 🚨 1. [수정 완료] Cloudflare 프록시(🌩️) 주소로 변경
+        // 1. Cloudflare 프록시(🌩️) 주소
         const FLASK_API_BASE_URL = 'https://api.fml1.store';
 
         
@@ -48,7 +48,7 @@
                     const labels = data.labels;
                     const speedValues = data.speed;
 
-                    // 🚨 3. [오타 수정] 'd' 가 아니라 '2d' 입니다.
+                    // 3. [오타 수정] '2d'
                     const ctx = document.getElementById('autowareSpeedChart').getContext('2d'); 
                     
                     if (speedChart) {
