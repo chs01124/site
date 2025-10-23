@@ -28,14 +28,14 @@
         let speedChart; // 그래프 객체를 저장할 전역 변수
         
         // 🚨 1. [수정 완료] Cloudflare 프록시(🌩️) 주소로 변경
-        // (https://api.fml1.store 는 203.237.96.224:80 으로 연결됩니다)
         const FLASK_API_BASE_URL = 'https://api.fml1.store';
 
         
         // 5초마다 API를 호출하여 데이터를 갱신하고 그래프를 다시 그리는 함수
         function fetchAndDrawGraph() {
             
-            // 2. Flask 서버의 전체 API 경로로 요청 (https://api.fml1.store/api/autoware)
+            // 🚨 2. [수정 완료] Flask 서버의 전체 API 경로로 요청
+            // (https://api.fml1.store/api/autoware)
             fetch(FLASK_API_BASE_URL + '/api/autoware') 
                 .then(response => {
                     if (!response.ok) {
@@ -48,7 +48,7 @@
                     const labels = data.labels;
                     const speedValues = data.speed;
 
-                    // 🚨 [오타 수정] 'd' 가 아니라 '2d' 입니다.
+                    // 🚨 3. [오타 수정] 'd' 가 아니라 '2d' 입니다.
                     const ctx = document.getElementById('autowareSpeedChart').getContext('2d'); 
                     
                     if (speedChart) {
@@ -95,7 +95,7 @@
 
                 })
                 .catch(error => {
-                    // 3. 네트워크 오류 또는 CORS 오류 시 메시지 표시
+                    // 네트워크 오류 또는 CORS 오류 시 메시지 표시
                     console.error('데이터 로드 오류:', error);
                     document.getElementById('lastUpdateTime').innerHTML = `<span style="color:red;">데이터 로드 실패: ${error.message} (서버 주소 및 방화벽 확인)</span>`;
                 });
