@@ -11,12 +11,12 @@
             margin: 0;
             padding: 20px;
         }
-        h1, h2 {
+        h1, h3 { /* h2 -> h3로 수정 */
             text-align: center;
             color: #333;
         }
 
-        /* [수정] 차트 컨테이너 레이아웃 변경 (2개 차트) */
+        /* [수정] 차트 컨테이너 레이아웃 변경 */
         .charts-wrapper {
             display: flex;
             flex-wrap: wrap; /* 화면이 좁아지면 줄바꿈 */
@@ -55,16 +55,30 @@
     <h1>Autoware 차량 실시간 데이터</h1>
     
     <!-- [수정] 차트들을 감싸는 래퍼 추가 -->
-    <div class.charts-wrapper">
+    <div class="charts-wrapper"> <!-- [오타 수정] class. -> class= -->
         <div class="chart-container">
-            <h3>차량 속도 (m/s)</h3>
+            <h3>차량 속도 (m/s) (/vehicle/status/velocity_status)</h3>
             <canvas id="autowareSpeedChart"></canvas>
         </div>
         
-        <!-- [추가] X/Y 좌표 차트 컨테이너 -->
+        <!-- [제거] X/Y 좌표 차트 컨테이너 -->
+        
+        <!-- [추가] Likelihood 차트 컨테이너 -->
         <div class="chart-container">
-            <h3>차량 이동 경로 (X-Y Scatter)</h3>
-            <canvas id="autowareTrajectoryChart"></canvas>
+            <h3>Voxel Likelihood (/localization/.../likelihood)</h3>
+            <canvas id="autowareLikelihoodChart"></canvas>
+        </div>
+
+        <!-- [추가] Accuracy 차트 컨테이너 -->
+        <div class="chart-container">
+            <h3>Localization Accuracy (m) (/localization_accuracy)</h3>
+            <canvas id="autowareAccuracyChart"></canvas>
+        </div>
+
+        <!-- [추가] Steering 차트 컨테이너 -->
+        <div class="chart-container">
+            <h3>Steering Status (Angle) (/vehicle/status/steering_status)</h3>
+            <canvas id="autowareSteeringChart"></canvas>
         </div>
     </div>
     <p id="lastUpdateTime">마지막 업데이트: 로딩 중...</p>
@@ -79,7 +93,10 @@
         
         // 그래프 객체를 저장할 전역 변수
         let speedChart; 
-        let trajectoryChart; // [추가] X-Y 경로 차트 변수
+        // [제거] let trajectoryChart;
+        let likelihoodChart; // [추가]
+        let accuracyChart;   // [추가]
+        let steeringChart;   // [추가]
 
         // [수정] 로컬 Flask 서버(app.py) 주소로 변경 (테스트용)
         // Cloudflare 배포 시: 'https://api.fml1.store'
@@ -96,10 +113,14 @@
                     return response.json();
                 })
                 .then(data => {
+                    // [수정] app.py에서 오는 모든 데이터 로드
                     const labels = data.labels;
                     const speedValues = data.speed;
-                    const xValues = data.x; // [추가] X 데이터
-                    const yValues = data.y; // [추가] Y 데이터
+                    // [제거] const xValues = data.x;
+                    // [제거] const yValues = data.y;
+                    const likelihoodValues = data.likelihood; // [추가]
+                    const accuracyValues = data.accuracy;     // [추가]
+                    const steeringValues = data.steering;     // [추가]
 
                     // --- 1. 속도 차트 업데이트 ---
                     const speedCtx = document.getElementById('autowareSpeedChart').getContext('2d'); 
@@ -136,43 +157,74 @@
                         });
                     }
 
-                    // --- 2. [추가] X/Y 경로 차트 업데이트 ---
+                    // --- 2. [제거] X/Y 경로 차트 ---
                     
-                    // X-Y 데이터를 Chart.js scatter 포맷 ({x: 1, y: 2})으로 변환
-                    const trajectoryData = xValues.map((val, index) => {
-                        return { x: val, y: yValues[index] };
-                    });
-
-                    const trajectoryCtx = document.getElementById('autowareTrajectoryChart').getContext('2d');
-                    
-                    if (trajectoryChart) {
-                        trajectoryChart.data.datasets[0].data = trajectoryData;
-                        trajectoryChart.update();
+                    // --- 3. [추가] Likelihood 차트 ---
+                    const likelihoodCtx = document.getElementById('autowareLikelihoodChart').getContext('2d');
+                    if (likelihoodChart) {
+                        likelihoodChart.data.labels = labels;
+                        likelihoodChart.data.datasets[0].data = likelihoodValues;
+                        likelihoodChart.update();
                     } else {
-                        trajectoryChart = new Chart(trajectoryCtx, {
-                            type: 'scatter', // [추가] scatter (산점도) 타입
+                        likelihoodChart = new Chart(likelihoodCtx, {
+                            type: 'line',
                             data: {
+                                labels: labels,
                                 datasets: [{
-                                    label: '이동 경로 (X/Y)',
-                                    data: trajectoryData,
-                                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                                    borderColor: 'rgba(54, 162, 235, 1)',
-                                    showLine: true, // 점들을 선으로 연결
-                                    tension: 0.1
+                                    label: 'Likelihood',
+                                    data: likelihoodValues,
+                                    backgroundColor: 'rgba(75, 192, 192, 0.4)',
+                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    borderWidth: 2, tension: 0.1, fill: true
                                 }]
                             },
-                            options: {
-                                responsive: true,
-                                animation: { duration: 0 },
-                                scales: {
-                                    x: {
-                                        title: { display: true, text: 'X 좌표' }
-                                    },
-                                    y: {
-                                        title: { display: true, text: 'Y 좌표' }
-                                    }
-                                }
-                            }
+                            options: { responsive: true, animation: { duration: 0 }, scales: { y: { beginAtZero: false, title: { display: true, text: 'Score' } } } }
+                        });
+                    }
+
+                    // --- 4. [추가] Accuracy 차트 ---
+                    const accuracyCtx = document.getElementById('autowareAccuracyChart').getContext('2d');
+                    if (accuracyChart) {
+                        accuracyChart.data.labels = labels;
+                        accuracyChart.data.datasets[0].data = accuracyValues;
+                        accuracyChart.update();
+                    } else {
+                        accuracyChart = new Chart(accuracyCtx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Accuracy',
+                                    data: accuracyValues,
+                                    backgroundColor: 'rgba(153, 102, 255, 0.4)',
+                                    borderColor: 'rgba(153, 102, 255, 1)',
+                                    borderWidth: 2, tension: 0.1, fill: true
+                                }]
+                            },
+                            options: { responsive: true, animation: { duration: 0 }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Error (m)' } } } }
+                        });
+                    }
+                    
+                    // --- 5. [추가] Steering 차트 ---
+                    const steeringCtx = document.getElementById('autowareSteeringChart').getContext('2d');
+                    if (steeringChart) {
+                        steeringChart.data.labels = labels;
+                        steeringChart.data.datasets[0].data = steeringValues;
+                        steeringChart.update();
+                    } else {
+                        steeringChart = new Chart(steeringCtx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Steering',
+                                    data: steeringValues,
+                                    backgroundColor: 'rgba(255, 159, 64, 0.4)',
+                                    borderColor: 'rgba(255, 159, 64, 1)',
+                                    borderWidth: 2, tension: 0.1, fill: true
+                                }]
+                            },
+                            options: { responsive: true, animation: { duration: 0 }, scales: { y: { beginAtZero: false, title: { display: true, text: 'Angle' } } } }
                         });
                     }
                     
