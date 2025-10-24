@@ -170,33 +170,6 @@
 
         // 5. 2초(2000ms)마다 자동으로 데이터를 갱신
         setInterval(fetchAndDrawGraph, 2000); 
-
-
-        // =============================================
-        // === 4. [추가] 가상 키보드 스크립트 ===
-        // =============================================
-
-        // 키보드 입력을 받을 <input> 요소를 찾습니다.
-        const virtualInput = document.getElementById('virtual-input');
-        
-        // 'key' 클래스를 가진 모든 버튼을 찾습니다.
-        const keys = document.querySelectorAll('.key');
-
-        // 각 키 버튼에 클릭 이벤트를 추가합니다.
-        keys.forEach(function(key) {
-            key.addEventListener('click', function() {
-                // 클릭된 버튼의 텍스트 (Q, W, E...)
-                const keyValue = key.textContent; 
-
-                if (key.classList.contains('backspace')) {
-                    // 'backspace' 클래스가 있으면 지우기 기능
-                    virtualInput.value = virtualInput.value.slice(0, -1);
-                } else {
-                    // 일반 키면 글자 추가
-                    virtualInput.value += keyValue;
-                }
-            });
-        });
     </script>
 </body>
 </html>
