@@ -4,44 +4,70 @@
     <title>Autoware 실시간 데이터 그래프</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* 1. [수정] 가상 마우스 효과 (커서 변경) 추가 */
-        body { 
-            font-family: Arial, sans-serif; 
+        body {
+            font-family: Arial, sans-serif;
             cursor: crosshair; /* 페이지 기본 커서를 십자 모양으로 변경 */
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 20px;
         }
-        .chart-container {
-            width: 80%; 
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        /* [수정] 차트 컨테이너 레이아웃 변경 (2개 차트) */
+        .charts-wrapper {
+            display: flex;
+            flex-wrap: wrap; /* 화면이 좁아지면 줄바꿈 */
+            justify-content: center;
+            gap: 20px;
+            width: 95%;
             margin: 20px auto;
         }
+        .chart-container {
+            width: 100%;
+            max-width: 600px; /* 차트 최대 너비 고정 */
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
         /* 차트와 버튼 위에서는 손가락 모양으로 */
-        #autowareSpeedChart, .key {
-             cursor: pointer;
+        canvas, .key {
+            cursor: pointer;
         }
         
         #lastUpdateTime {
             text-align: center;
             font-size: 0.9em;
             color: #666;
+            margin-top: 15px;
         }
 
-        /* 2. [추가] 가상 키보드 스타일 */
+        /* 가상 키보드 스타일 */
         #keyboard-section {
-            width: 80%;
-            margin: 30px auto; /* 위쪽 차트와 간격 띄우기 */
+            width: 90%;
+            max-width: 1240px; /* 전체 너비에 맞게 */
+            margin: 30px auto;
             text-align: center;
             padding-top: 20px;
-            border-top: 1px solid #ddd; /* 구분선 */
+            border-top: 1px solid #ddd;
         }
         #virtual-input {
             width: 300px;
             font-size: 1.2em;
-            padding: 5px;
+            padding: 8px;
             margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
         #keyboard-container {
             display: flex;
-            justify-content: center; /* 버튼들 가운데 정렬 */
-            gap: 10px; /* 버튼 사이 간격 */
+            justify-content: center;
+            gap: 10px;
         }
         .key {
             padding: 15px 20px;
@@ -50,11 +76,14 @@
             border: 1px solid #ccc;
             background-color: #f4f4f4;
             border-radius: 5px;
-            transition: background-color 0.2s;
-            user-select: none; /* 텍스트 선택 방지 */
+            transition: background-color 0.2s, transform 0.1s;
+            user-select: none;
         }
         .key:hover {
             background-color: #e0e0e0;
+        }
+        .key:active {
+            transform: scale(0.95); /* 클릭 효과 */
         }
         .key.backspace {
             background-color: #f8d7da;
@@ -65,14 +94,24 @@
 <body>
     <h1>Autoware 차량 실시간 데이터</h1>
     
-    <div class="chart-container">
-        <canvas id="autowareSpeedChart"></canvas>
-        <p id="lastUpdateTime">마지막 업데이트: 로딩 중...</p>
+    <!-- [수정] 차트들을 감싸는 래퍼 추가 -->
+    <div class="charts-wrapper">
+        <div class="chart-container">
+            <h3>차량 속도 (m/s)</h3>
+            <canvas id="autowareSpeedChart"></canvas>
+        </div>
+        
+        <!-- [추가] X/Y 좌표 차트 컨테이너 -->
+        <div class="chart-container">
+            <h3>차량 이동 경로 (X-Y Scatter)</h3>
+            <canvas id="autowareTrajectoryChart"></canvas>
+        </div>
     </div>
+    <p id="lastUpdateTime">마지막 업데이트: 로딩 중...</p>
 
     <div id="keyboard-section">
         <h2>가상 키보드 입력</h2>
-        <input type="text" id="virtual-input" placeholder="아래 버튼으로 입력...">
+        <input type="text" id="virtual-input" placeholder="아래 버튼으로 입력..." readonly> <!-- readonly로 변경 -->
         
         <div id="keyboard-container">
             <button class="key">Q</button>
@@ -87,23 +126,23 @@
 
     <script>
         // =============================================
-        // === 1. 기존 차트 스크립트 (수정 없음) ===
+        // === 1. 차트 스크립트 ===
         // =============================================
-        let speedChart; // 그래프 객체를 저장할 전역 변수
         
-        // 1. Cloudflare 프록시(🌩️) 주소
-        const FLASK_API_BASE_URL = 'https://api.fml1.store';
+        // 그래프 객체를 저장할 전역 변수
+        let speedChart; 
+        let trajectoryChart; // [추가] X-Y 경로 차트 변수
 
+        // [수정] 로컬 Flask 서버(app.py) 주소로 변경 (테스트용)
+        // Cloudflare 배포 시: 'https://api.fml1.store'
+        const FLASK_API_BASE_URL = 'http://127.0.0.1:5001'; 
         
         // 5초마다 API를 호출하여 데이터를 갱신하고 그래프를 다시 그리는 함수
         function fetchAndDrawGraph() {
             
-            // 🚨 2. [수정 완료] Flask 서버의 전체 API 경로로 요청
-            // (https://api.fml1.store/api/autoware)
             fetch(FLASK_API_BASE_URL + '/api/autoware') 
                 .then(response => {
                     if (!response.ok) {
-                        // 404, 500 등 서버 응답 오류 처리
                         throw new Error(`HTTP 오류! 서버 상태: ${response.status}`);
                     }
                     return response.json();
@@ -111,18 +150,18 @@
                 .then(data => {
                     const labels = data.labels;
                     const speedValues = data.speed;
+                    const xValues = data.x; // [추가] X 데이터
+                    const yValues = data.y; // [추가] Y 데이터
 
-                    // 3. [오타 수정] '2d'
-                    const ctx = document.getElementById('autowareSpeedChart').getContext('2d'); 
+                    // --- 1. 속도 차트 업데이트 ---
+                    const speedCtx = document.getElementById('autowareSpeedChart').getContext('2d'); 
                     
                     if (speedChart) {
-                        // 기존 그래프가 있으면 데이터를 갱신합니다.
                         speedChart.data.labels = labels;
                         speedChart.data.datasets[0].data = speedValues;
-                        speedChart.update(); // 그래프 업데이트 명령
+                        speedChart.update();
                     } else {
-                        // 최초 로드 시 그래프를 생성합니다.
-                        speedChart = new Chart(ctx, {
+                        speedChart = new Chart(speedCtx, {
                             type: 'line', 
                             data: {
                                 labels: labels,
@@ -132,22 +171,57 @@
                                     backgroundColor: 'rgba(255, 99, 132, 0.4)',
                                     borderColor: 'rgba(255, 99, 132, 1)',
                                     borderWidth: 2,
-                                    tension: 0.1, // 부드러운 선
+                                    tension: 0.1,
                                     fill: true
                                 }]
                             },
                             options: {
                                 responsive: true,
-                                animation: {
-                                    duration: 0 // 업데이트 시 애니메이션을 끔
-                                },
+                                animation: { duration: 0 },
                                 scales: {
                                     y: {
                                         beginAtZero: true,
-                                        title: {
-                                            display: true,
-                                            text: '속도 (m/s)'
-                                        }
+                                        title: { display: true, text: '속도 (m/s)' }
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    // --- 2. [추가] X/Y 경로 차트 업데이트 ---
+                    
+                    // X-Y 데이터를 Chart.js scatter 포맷 ({x: 1, y: 2})으로 변환
+                    const trajectoryData = xValues.map((val, index) => {
+                        return { x: val, y: yValues[index] };
+                    });
+
+                    const trajectoryCtx = document.getElementById('autowareTrajectoryChart').getContext('2d');
+                    
+                    if (trajectoryChart) {
+                        trajectoryChart.data.datasets[0].data = trajectoryData;
+                        trajectoryChart.update();
+                    } else {
+                        trajectoryChart = new Chart(trajectoryCtx, {
+                            type: 'scatter', // [추가] scatter (산점도) 타입
+                            data: {
+                                datasets: [{
+                                    label: '이동 경로 (X/Y)',
+                                    data: trajectoryData,
+                                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    showLine: true, // 점들을 선으로 연결
+                                    tension: 0.1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                animation: { duration: 0 },
+                                scales: {
+                                    x: {
+                                        title: { display: true, text: 'X 좌표' }
+                                    },
+                                    y: {
+                                        title: { display: true, text: 'Y 좌표' }
                                     }
                                 }
                             }
@@ -159,17 +233,41 @@
 
                 })
                 .catch(error => {
-                    // 네트워크 오류 또는 CORS 오류 시 메시지 표시
                     console.error('데이터 로드 오류:', error);
                     document.getElementById('lastUpdateTime').innerHTML = `<span style="color:red;">데이터 로드 실패: ${error.message} (서버 주소 및 방화벽 확인)</span>`;
                 });
         }
 
-        // 4. 페이지 로드 시 즉시 실행
+        // 페이지 로드 시 즉시 실행
         fetchAndDrawGraph();
 
-        // 5. 2초(2000ms)마다 자동으로 데이터를 갱신
+        // 2초(2000ms)마다 자동으로 데이터를 갱신
         setInterval(fetchAndDrawGraph, 2000); 
+
+        
+        // =============================================
+        // === 2. [추가] 가상 키보드 스크립트 ===
+        // =============================================
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const virtualInput = document.getElementById('virtual-input');
+            const keys = document.querySelectorAll('.key');
+
+            keys.forEach(key => {
+                key.addEventListener('click', () => {
+                    const keyText = key.textContent;
+
+                    if (key.classList.contains('backspace')) {
+                        // '지우기' 버튼
+                        virtualInput.value = virtualInput.value.slice(0, -1);
+                    } else {
+                        // 일반 문자 버튼
+                        virtualInput.value += keyText;
+                    }
+                });
+            });
+        });
+
     </script>
 </body>
 </html>
