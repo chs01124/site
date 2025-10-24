@@ -35,8 +35,8 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
-        /* 차트와 버튼 위에서는 손가락 모양으로 */
-        canvas, .key {
+        /* 차트 위에서는 손가락 모양으로 */
+        canvas {
             cursor: pointer;
         }
         
@@ -47,55 +47,15 @@
             margin-top: 15px;
         }
 
-        /* 가상 키보드 스타일 */
-        #keyboard-section {
-            width: 90%;
-            max-width: 1240px; /* 전체 너비에 맞게 */
-            margin: 30px auto;
-            text-align: center;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
-        }
-        #virtual-input {
-            width: 300px;
-            font-size: 1.2em;
-            padding: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        #keyboard-container {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-        }
-        .key {
-            padding: 15px 20px;
-            font-size: 1.1em;
-            font-weight: bold;
-            border: 1px solid #ccc;
-            background-color: #f4f4f4;
-            border-radius: 5px;
-            transition: background-color 0.2s, transform 0.1s;
-            user-select: none;
-        }
-        .key:hover {
-            background-color: #e0e0e0;
-        }
-        .key:active {
-            transform: scale(0.95); /* 클릭 효과 */
-        }
-        .key.backspace {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
+        /* --- [제거] 가상 키보드 스타일 --- */
+
     </style>
 </head>
 <body>
     <h1>Autoware 차량 실시간 데이터</h1>
     
     <!-- [수정] 차트들을 감싸는 래퍼 추가 -->
-    <div class="charts-wrapper">
+    <div class.charts-wrapper">
         <div class="chart-container">
             <h3>차량 속도 (m/s)</h3>
             <canvas id="autowareSpeedChart"></canvas>
@@ -109,19 +69,7 @@
     </div>
     <p id="lastUpdateTime">마지막 업데이트: 로딩 중...</p>
 
-    <div id="keyboard-section">
-        <h2>가상 키보드 입력</h2>
-        <input type="text" id="virtual-input" placeholder="아래 버튼으로 입력..." readonly> <!-- readonly로 변경 -->
-        
-        <div id="keyboard-container">
-            <button class="key">Q</button>
-            <button class="key">W</button>
-            <button class="key">E</button>
-            <button class="key">R</button>
-            <button class="key">T</button>
-            <button class="key backspace">← 지우기</button>
-        </div>
-    </div>
+    <!-- --- [제거] 가상 키보드 HTML --- -->
 
 
     <script>
@@ -246,28 +194,11 @@
 
         
         // =============================================
-        // === 2. [추가] 가상 키보드 스크립트 ===
+        // === 2. [제거] 가상 키보드 스크립트 ===
         // =============================================
         
-        document.addEventListener('DOMContentLoaded', () => {
-            const virtualInput = document.getElementById('virtual-input');
-            const keys = document.querySelectorAll('.key');
-
-            keys.forEach(key => {
-                key.addEventListener('click', () => {
-                    const keyText = key.textContent;
-
-                    if (key.classList.contains('backspace')) {
-                        // '지우기' 버튼
-                        virtualInput.value = virtualInput.value.slice(0, -1);
-                    } else {
-                        // 일반 문자 버튼
-                        virtualInput.value += keyText;
-                    }
-                });
-            });
-        });
 
     </script>
 </body>
 </html>
+
